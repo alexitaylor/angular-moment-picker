@@ -93,7 +93,8 @@ export interface IDirectiveScopeInternal extends IDirectiveScope, IProviderOptio
 		detectMinMax: () => void;
 
 		// specific view controllers
-		decade: IView;
+        century: IView;
+        decade: IView;
 		year: IView;
 		month: IView;
 		day: IView;

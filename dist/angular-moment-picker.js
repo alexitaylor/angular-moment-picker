@@ -64,7 +64,7 @@
 /******/ 	__webpack_require__.p = "";
 /******/
 /******/ 	// Load entry module and return exports
-/******/ 	return __webpack_require__(__webpack_require__.s = 17);
+/******/ 	return __webpack_require__(__webpack_require__.s = 18);
 /******/ })
 /************************************************************************/
 /******/ ([
@@ -206,10 +206,10 @@ exports.__esModule = true;
 var angular = __webpack_require__(1);
 var moment = __webpack_require__(2);
 var helpers_1 = __webpack_require__(8);
-var views_1 = __webpack_require__(13);
+var views_1 = __webpack_require__(14);
 var utility_1 = __webpack_require__(0);
 var templateHtml = __webpack_require__(6);
-var Directive = (function () {
+var Directive = /** @class */ (function () {
     function Directive($timeout, $sce, $log, $window, provider, $compile, $templateCache) {
         var _this = this;
         this.$timeout = $timeout;
@@ -304,11 +304,13 @@ var Directive = (function () {
                     }
                 };
                 $scope.views = {
-                    all: ['decade', 'year', 'month', 'day', 'hour', 'minute'],
-                    precisions: { decade: 'year', year: 'month', month: 'date', day: 'hour', hour: 'minute', minute: 'second' },
+                    all: ['century', 'decade', 'year', 'month', 'day', 'hour', 'minute'],
+                    precisions: { century: 'year', decade: 'year', year: 'month', month: 'date', day: 'hour', hour: 'minute', minute: 'second' },
                     // for each view, `$scope.views.formats` object contains the available moment formats
                     // formats present in more views are used to perform min/max view detection (i.e. 'LTS', 'LT', ...)
                     formats: {
+                        century: 'Y{1,2}(?!Y)|YYYY|[Ll]{1,4}(?!T)',
+                        /* formats: Y,YY,YYYY,L,LL,LLL,LLLL,l,ll,lll,llll */
                         decade: 'Y{1,2}(?!Y)|YYYY|[Ll]{1,4}(?!T)',
                         /* formats: Y,YY,YYYY,L,LL,LLL,LLLL,l,ll,lll,llll */
                         year: 'M{1,4}(?![Mo])|Mo|Q',
@@ -352,6 +354,7 @@ var Directive = (function () {
                         $scope.detectedMaxView = $scope.views.all[maxView];
                     },
                     // specific views
+                    century: new views_1.CenturyView($scope, $ctrl, _this.provider),
                     decade: new views_1.DecadeView($scope, $ctrl, _this.provider),
                     year: new views_1.YearView($scope, $ctrl, _this.provider),
                     month: new views_1.MonthView($scope, $ctrl, _this.provider),
@@ -439,8 +442,8 @@ var Directive = (function () {
                         $scope.$evalAsync();
                     },
                     // utility
-                    unit: function () { return $scope.view.selected == 'decade' ? 10 : 1; },
-                    precision: function () { return $scope.view.selected.replace('decade', 'year'); },
+                    unit: function () { return $scope.view.selected == 'decade' ? 10 :  true ? 10 : 1; },
+                    precision: function () { return $scope.view.selected.replace('decade', 'year').replace('century', 'year'); },
                     // header
                     title: '',
                     previous: {
@@ -696,12 +699,12 @@ exports.getOffset = function (element) {
 
 exports.__esModule = true;
 var angular = __webpack_require__(1);
-var Provider = (function () {
+var Provider = /** @class */ (function () {
     function Provider() {
         this.settings = {
             locale: 'en',
             format: 'L LTS',
-            minView: 'decade',
+            minView: 'century',
             maxView: 'minute',
             startView: 'year',
             inline: false,
@@ -754,7 +757,61 @@ exports["default"] = Provider;
 
 exports.__esModule = true;
 var utility_1 = __webpack_require__(0);
-var DayView = (function () {
+var moment = __webpack_require__(2);
+var CenturyView = /** @class */ (function () {
+    function CenturyView($scope, $ctrl, provider) {
+        this.$scope = $scope;
+        this.$ctrl = $ctrl;
+        this.provider = provider;
+        this.perLine = 3;
+        this.rows = {};
+    }
+    CenturyView.prototype.render = function () {
+        var year = this.$scope.view.moment.clone(), firstYear = Math.floor(year.year() / 10) * 10 - 10;
+        // Calculate what decade given year is in
+        year = moment(Math.floor(year.year() / 10) * 10);
+        this.rows = {};
+        year.year(firstYear);
+        for (var y = 0; y < 12; y++) {
+            var index = Math.floor(y / this.perLine), selectable = this.$scope.limits.isSelectable(year, 'year');
+            if (!this.rows[index])
+                this.rows[index] = [];
+            this.rows[index].push({
+                index: year.year(),
+                label: year.format(this.provider.yearsFormat) + ' - ' + year.add(9, 'years').format(this.provider.yearsFormat),
+                year: year.year(),
+                "class": [
+                    this.$scope.keyboard && year.isSame(this.$scope.view.moment, 'year') ? 'highlighted' : '',
+                    !selectable || [0, 11].indexOf(y) >= 0 ? 'disabled' : utility_1.isValidMoment(this.$ctrl.$modelValue) && year.isSame(this.$ctrl.$modelValue, 'year') ? 'selected' : ''
+                ].join(' ').trim(),
+                selectable: selectable
+            });
+            year.add(1, 'years');
+        }
+        // return title
+        return [year.subtract(11, 'years').format('YYYY'), year.subtract(99, 'years').format('YYYY')].reverse().join(' - ');
+    };
+    CenturyView.prototype.set = function (year) {
+        if (!year.selectable)
+            return;
+        this.$scope.view.moment.year(year.year);
+        this.$scope.view.update();
+        this.$scope.view.change('decade');
+    };
+    return CenturyView;
+}());
+exports["default"] = CenturyView;
+
+
+/***/ }),
+/* 11 */
+/***/ (function(module, exports, __webpack_require__) {
+
+"use strict";
+
+exports.__esModule = true;
+var utility_1 = __webpack_require__(0);
+var DayView = /** @class */ (function () {
     function DayView($scope, $ctrl, provider) {
         this.$scope = $scope;
         this.$ctrl = $ctrl;
@@ -800,14 +857,14 @@ exports["default"] = DayView;
 
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 exports.__esModule = true;
 var utility_1 = __webpack_require__(0);
-var DecadeView = (function () {
+var DecadeView = /** @class */ (function () {
     function DecadeView($scope, $ctrl, provider) {
         this.$scope = $scope;
         this.$ctrl = $ctrl;
@@ -851,7 +908,7 @@ exports["default"] = DecadeView;
 
 
 /***/ }),
-/* 12 */
+/* 13 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -860,7 +917,7 @@ exports.__esModule = true;
 var angular = __webpack_require__(1);
 var moment = __webpack_require__(2);
 var utility_1 = __webpack_require__(0);
-var HourView = (function () {
+var HourView = /** @class */ (function () {
     function HourView($scope, $ctrl, provider) {
         this.$scope = $scope;
         this.$ctrl = $ctrl;
@@ -929,28 +986,30 @@ exports["default"] = HourView;
 
 
 /***/ }),
-/* 13 */
+/* 14 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
 
 exports.__esModule = true;
-var decadeView_1 = __webpack_require__(11);
+var centuryView_1 = __webpack_require__(10);
+exports.CenturyView = centuryView_1["default"];
+var decadeView_1 = __webpack_require__(12);
 exports.DecadeView = decadeView_1["default"];
-var yearView_1 = __webpack_require__(16);
+var yearView_1 = __webpack_require__(17);
 exports.YearView = yearView_1["default"];
-var monthView_1 = __webpack_require__(15);
+var monthView_1 = __webpack_require__(16);
 exports.MonthView = monthView_1["default"];
-var dayView_1 = __webpack_require__(10);
+var dayView_1 = __webpack_require__(11);
 exports.DayView = dayView_1["default"];
-var hourView_1 = __webpack_require__(12);
+var hourView_1 = __webpack_require__(13);
 exports.HourView = hourView_1["default"];
-var minuteView_1 = __webpack_require__(14);
+var minuteView_1 = __webpack_require__(15);
 exports.MinuteView = minuteView_1["default"];
 
 
 /***/ }),
-/* 14 */
+/* 15 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -958,7 +1017,7 @@ exports.MinuteView = minuteView_1["default"];
 exports.__esModule = true;
 var angular = __webpack_require__(1);
 var utility_1 = __webpack_require__(0);
-var MinuteView = (function () {
+var MinuteView = /** @class */ (function () {
     function MinuteView($scope, $ctrl, provider) {
         this.$scope = $scope;
         this.$ctrl = $ctrl;
@@ -1028,7 +1087,7 @@ exports["default"] = MinuteView;
 
 
 /***/ }),
-/* 15 */
+/* 16 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1037,7 +1096,7 @@ exports.__esModule = true;
 var angular = __webpack_require__(1);
 var moment = __webpack_require__(2);
 var utility_1 = __webpack_require__(0);
-var MonthView = (function () {
+var MonthView = /** @class */ (function () {
     function MonthView($scope, $ctrl, provider) {
         this.$scope = $scope;
         this.$ctrl = $ctrl;
@@ -1088,7 +1147,7 @@ exports["default"] = MonthView;
 
 
 /***/ }),
-/* 16 */
+/* 17 */
 /***/ (function(module, exports, __webpack_require__) {
 
 "use strict";
@@ -1096,7 +1155,7 @@ exports["default"] = MonthView;
 exports.__esModule = true;
 var moment = __webpack_require__(2);
 var utility_1 = __webpack_require__(0);
-var YearView = (function () {
+var YearView = /** @class */ (function () {
     function YearView($scope, $ctrl, provider) {
         this.$scope = $scope;
         this.$ctrl = $ctrl;
@@ -1141,7 +1200,7 @@ exports["default"] = YearView;
 
 
 /***/ }),
-/* 17 */
+/* 18 */
 /***/ (function(module, exports, __webpack_require__) {
 
 __webpack_require__(5);

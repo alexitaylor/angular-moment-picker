@@ -154,6 +154,9 @@
   background-image: -o-radial-gradient(transparent, rgba(0, 0, 0, 0.15));
   background-image: radial-gradient(transparent, rgba(0, 0, 0, 0.15));
 }
+.moment-picker .century-view td {
+  padding: 0.5em 1em;
+}
 .moment-picker .decade-view td,
 .moment-picker .year-view td {
   height: 3.4em;

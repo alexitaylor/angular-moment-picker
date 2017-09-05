@@ -3,7 +3,7 @@ import * as moment from 'moment';
 import { getOffset } from './helpers';
 import { IProviderOptions } from './provider';
 import { ViewString, IView, IViewItem, IDirectiveScopeInternal, IModelController } from './definitions';
-import { DecadeView, YearView, MonthView, DayView, HourView, MinuteView } from './views';
+import { CenturyView, DecadeView, YearView, MonthView, DayView, HourView, MinuteView } from './views';
 import { isValidMoment, toValue, toMoment, momentToValue, valueToMoment, setValue, updateMoment, KEYS } from './utility';
 
 const templateHtml = require('./template.tpl.html');
@@ -96,12 +96,14 @@ export default class Directive implements ng.IDirective {
 			};
 
 			$scope.views = {
-				all: ['decade', 'year', 'month', 'day', 'hour', 'minute'],
-				precisions: { decade: 'year', year: 'month', month: 'date', day: 'hour', hour: 'minute', minute: 'second' },
+				all: ['century', 'decade', 'year', 'month', 'day', 'hour', 'minute'],
+				precisions: { century: 'year', decade: 'year', year: 'month', month: 'date', day: 'hour', hour: 'minute', minute: 'second' },
 				// for each view, `$scope.views.formats` object contains the available moment formats
 				// formats present in more views are used to perform min/max view detection (i.e. 'LTS', 'LT', ...)
 				formats: {
-					decade:	'Y{1,2}(?!Y)|YYYY|[Ll]{1,4}(?!T)',
+                    century:	'Y{1,2}(?!Y)|YYYY|[Ll]{1,4}(?!T)',
+                            /* formats: Y,YY,YYYY,L,LL,LLL,LLLL,l,ll,lll,llll */
+				    decade:	'Y{1,2}(?!Y)|YYYY|[Ll]{1,4}(?!T)',
 							/* formats: Y,YY,YYYY,L,LL,LLL,LLLL,l,ll,lll,llll */
 					year:	'M{1,4}(?![Mo])|Mo|Q',
 							/* formats: M,MM,MMM,MMM,Mo,Q */
@@ -139,7 +141,8 @@ export default class Directive implements ng.IDirective {
 					$scope.detectedMaxView = $scope.views.all[maxView];
 				},
 				// specific views
-				decade:	new DecadeView	($scope, $ctrl, this.provider),
+                century: new CenturyView ($scope, $ctrl, this.provider),
+                decade:	new DecadeView	($scope, $ctrl, this.provider),
 				year:	new YearView	($scope, $ctrl, this.provider),
 				month:	new MonthView	($scope, $ctrl, this.provider),
 				day:	new DayView		($scope, $ctrl, this.provider),
@@ -173,7 +176,7 @@ export default class Directive implements ng.IDirective {
 					if (!$scope.view.isOpen || $scope.position || $scope.inline) return;
 
 					let element = $element[0],
-						picker = $scope.picker.children()[0],
+						picker = $scope.picker[0],
 						hasClassTop = $scope.picker.hasClass('top'),
 						hasClassRight = $scope.picker.hasClass('right'),
 						offset = getOffset($element[0]),
@@ -236,8 +239,8 @@ export default class Directive implements ng.IDirective {
 					$scope.$evalAsync();
 				},
 				// utility
-				unit: () => $scope.view.selected == 'decade' ? 10 : 1,
-				precision: () => <moment.unitOfTime.DurationConstructor>$scope.view.selected.replace('decade', 'year'),
+				unit: () => $scope.view.selected == 'decade' ? 10 : 1 || $scope.view.selected == 'century' ? 10 : 1,
+				precision: () => <moment.unitOfTime.DurationConstructor>$scope.view.selected.replace('decade', 'year').replace('century', 'year'),
 				// header
 				title: '',
 				previous: {
@@ -278,7 +281,7 @@ export default class Directive implements ng.IDirective {
 					let nextView = $scope.views.all.indexOf(view),
 						minView  = $scope.views.all.indexOf($scope.minView),
 						maxView  = $scope.views.all.indexOf($scope.maxView);
-					
+
 					const update = () => {
 						setValue($scope.view.moment, $scope, $ctrl, $attrs);
 						$scope.view.update();
